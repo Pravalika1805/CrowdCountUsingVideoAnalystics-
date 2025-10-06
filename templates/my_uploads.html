@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Uploads</title>
+  <style>
+    body { font-family: Arial; background: #ecf0f1; margin: 0; }
+    .sidebar { width: 200px; background: #2c3e50; color: white; position: fixed; height: 100%; padding: 20px; }
+    .sidebar a { color: white; text-decoration: none; display: block; margin: 10px 0; }
+    .main { margin-left: 220px; padding: 20px; }
+    .header { background: #34495e; padding: 10px; color: white; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h3>Hello, {{ user }}</h3>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/uploads">My Uploads</a>
+    <a href="/logout">Logout</a>
+  </div>
+  <div class="main">
+    <div class="header"><h2>My Uploads</h2></div>
+    <p>List of uploaded videos will go here.</p>
+  </div>
+</body>
+</html>
+
+
+
+

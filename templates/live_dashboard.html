@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="p-3 bg-light">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Live Dashboard - {{ user }}</h4>
+    <a href="/index" class="btn btn-secondary btn-sm">Back to Video</a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Line chart -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6>Zone Counts Over Time</h6>
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar chart -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6>Live Zone Counts</h6>
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lineChart, barChart;
+
+    // fixed colors per zone
+    const zoneColors = {};
+    function getColor(zone) {
+      if (!zoneColors[zone]) {
+        const r = Math.floor(Math.random() * 255);
+        const g = Math.floor(Math.random() * 255);
+        const b = Math.floor(Math.random() * 255);
+        zoneColors[zone] = `rgba(${r},${g},${b},0.8)`;
+      }
+      return zoneColors[zone];
+    }
+
+    // --- Load historical data for line chart ---
+    async function loadLineChart() {
+      const data = await fetch("/chart_data").then(r => r.json());
+
+      // group by zone
+      const zoneData = {};
+      data.forEach(([zone, count, ts]) => {
+        if (!zoneData[zone]) zoneData[zone] = { counts: [], timestamps: [] };
+        zoneData[zone].counts.push(count);
+        zoneData[zone].timestamps.push(ts);
+      });
+
+      const labels = [...new Set(data.map(d => d[2]))]; 
+      const datasets = Object.keys(zoneData).map(zone => ({
+        label: zone,
+        data: zoneData[zone].counts,
+        borderColor: getColor(zone),
+        fill: false
+      }));
+
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: { labels: labels, datasets: datasets }
+      });
+    }
+
+    // --- Load live snapshot for bar chart ---
+    async function loadBarChart() {
+      const snapshot = await fetch("/zone_counts").then(r => r.json());
+      const zones = snapshot.zones;
+
+      if (barChart) barChart.destroy();
+      barChart = new Chart(document.getElementById("barChart"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(zones),
+          datasets: [{
+            label: "Current Count",
+            data: Object.values(zones),
+            backgroundColor: Object.keys(zones).map(z => getColor(z))
+          }]
+        }
+      });
+    }
+
+    // --- Refresh both charts ---
+    function refreshCharts() {
+      loadLineChart();
+      loadBarChart();
+    }
+
+    refreshCharts();
+    setInterval(refreshCharts, 5000); 
+  </script>
+</body>
+</html>
+
+
+

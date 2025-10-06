@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Graphs</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+</head>
+<body>
+  <div id="sidebar">
+    <h2>Zone Manager</h2>
+    <p>Hello, {{ user.name }}</p>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/graphs" class="active">Graphs</a>
+    <a href="/my_uploads">My Uploads</a>
+    <hr>
+    <a href="/logout">Logout</a>
+  </div>
+
+  <div id="main">
+    <h1>Live Zone Graphs</h1>
+    <div class="card">
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="card">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let lineChart, barChart;
+
+    async function fetchGraphData() {
+      let res = await fetch("/graph_data");
+      let data = await res.json();
+
+      // Group by zone_id, keep latest labels
+      let grouped = {};
+      data.forEach(r => {
+        let zone = r.zone_label || `Zone ${r.zone_id}`;
+        if (!grouped[zone]) grouped[zone] = [];
+        grouped[zone].push({x: moment(r.detected_at), y: parseInt(r.count)});
+      });
+
+      let datasets = Object.keys(grouped).map(zone => ({
+        label: zone,
+        data: grouped[zone],
+        borderWidth: 2,
+        fill: false
+      }));
+
+      // Line Chart
+      if (!lineChart) {
+        lineChart = new Chart(document.getElementById("lineChart"), {
+          type: "line",
+          data: { datasets: datasets },
+          options: {
+            responsive: true,
+            scales: {
+              x: { type: "time", time: { unit: "second" } },
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      } else {
+        lineChart.data.datasets = datasets;
+        lineChart.update();
+      }
+
+      // Bar Chart (latest values only)
+      let labels = Object.keys(grouped);
+      let values = Object.keys(grouped).map(k => grouped[k].slice(-1)[0].y);
+
+      if (!barChart) {
+        barChart = new Chart(document.getElementById("barChart"), {
+          type: "bar",
+          data: { labels: labels, datasets: [{ label: "Current Count", data: values }] },
+          options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        });
+      } else {
+        barChart.data.labels = labels;
+        barChart.data.datasets[0].data = values;
+        barChart.update();
+      }
+    }
+
+    setInterval(fetchGraphData, 3000);
+    fetchGraphData();
+  </script>
+</body>
+</html>
+
+
+
